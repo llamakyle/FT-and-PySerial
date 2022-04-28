@@ -1,12 +1,18 @@
 import serial
 import multiprocessing
-import FT_sensor.FT_ros_interface as ros_interface
-import FT_sensor.launch_FT_sensor as launch_ft_sensor
-from FT_sensor.events import event_shutdown_FT
-ser = serial.Serial('/dev/ttyACM0')	#This will change depending on the port the ft sensor is connected to
+import time
+#import FT_sensor.FT_ros_interface as ros_interface
+#import FT_sensor.launch_FT_sensor as launch_ft_sensor
+#from FT_sensor.events import event_shutdown_FT
+ser = serial.Serial('/dev/ttyACM0')	#This will change depending on the port the stm is connected to
 ser.flushInput()
-ser2 = serial.Serial('/dev/ttyACM1')	#This will change depending on the port the ft sensor is connected to
-ser2.flushInput()
+#ser2 = serial.Serial('/dev/ttyACM1')	#This will change depending on the port the ft sensor is connected to
+#ser2.flushInput()
+
+
+
+
+
 
 # Start FT sensor ROS node =====================================================================================
 def startFT():
@@ -29,7 +35,7 @@ def endFT():
 # Read Bota FT sensor and translate into N	
 def readFT():
 	try:
-		ser2.flushInput()
+		ser2.reset_input_buffer()
 		ser_bytes2 = ser2.readline()
 		
 		try:
@@ -39,17 +45,41 @@ def readFT():
 	except:
 		print('Connection Error to FT sensor')
 		
-# Read two tab delimited values from the STM	
+# Read 4 tab delimited values from the STM	
 def readSTM():
-	try:
-		ser.flushInput()
-		ser_bytes = ser.readline()
-		
-		try:
+	Curr=0
+	Pos=0
+	Stif=0
+	Etc=0
+	ser_bytes = ser.readline()
+	decoded = ser_bytes[0:len(ser_bytes)-2].decode("utf-8")
+	Curr,Pos,Stif,Etc=decoded.split("\t")
 
-			decoded = ser_bytes[0:len(ser_bytes)-2].decode("utf-8")
-			SG1,SG2=decoded.split("\t")
+
+	return Curr,Pos,Stif,Etc
+	
+# Write desired current and position to STM	
+def writeSTM(d_Current,d_Position):
+	try:
+		x=str(d_Current) +','+str(d_Position)+'\r\n'
+
+		ser.write(bytes(x,'utf-8'))
+
+	except :
+		print('Write Failed')	
+	
+	
+if __name__ == '__main__':
+	while True:
+		try:
+			Curr,Pos,Stif,Etc=readSTM()
 		except:
-			print('Read Error from STM')
-	except:
-		print('Connection Error to STM')
+			continue
+		print(Curr,Pos,Stif,Etc)
+		dc=1
+		dp=2
+		writeSTM(dc,dp)
+		time.sleep(.01)
+			
+	
+	
