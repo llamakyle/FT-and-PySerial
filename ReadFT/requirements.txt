@@ -1,0 +1,11 @@
+matplotlib
+numpy
+scipy
+pyserial
+geomdl
+pytest
+pandas
+pyyaml
+rospkg
+netifaces
+defusedxml
