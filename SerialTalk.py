@@ -1,49 +1,62 @@
 import serial
-import multiprocessing
+import signal
 import time
 #import FT_sensor.FT_ros_interface as ros_interface
 #import FT_sensor.launch_FT_sensor as launch_ft_sensor
 #from FT_sensor.events import event_shutdown_FT
-ser = serial.Serial('/dev/ttyACM0')	#This will change depending on the port the stm is connected to
-ser.flushInput()
-#ser2 = serial.Serial('/dev/ttyACM1')	#This will change depending on the port the ft sensor is connected to
-#ser2.flushInput()
-
-
-
+try:
+	ser = serial.Serial('/dev/ttyACM0')	#This will change depending on the port the stm is connected to
+	ser.flushInput()
+except:
+	print('No STM Connected')
+try:
+	serFT = serial.Serial(port='/dev/ttyUSB0',
+							baudrate=460800,
+							timeout=1,
+							parity=serial.PARITY_NONE,
+    						stopbits=serial.STOPBITS_ONE,
+    						bytesize=serial.EIGHTBITS)
+	serFT.flushInput()
+except:
+	print('No FT Connected')
 
 
 
 # Start FT sensor ROS node =====================================================================================
 def startFT():
-	p_launch = multiprocessing.Process(target=launch_ft_sensor.launch_ft_node, args=(event_shutdown_FT,))
-	p_launch.start()
-	time.sleep(10)  # Wait until the FT node is fully launched
-	p_FT = multiprocessing.Process(target=ros_interface.measure_force, args=(event_shutdown_FT, time_begin_global))
-	p_FT.start()
-	time.sleep(10)  # Wait until FT sensor calibration is finished
-	atexit.register(exit_handler)
+	time.sleep(2)
+	serFT.write(b'C')
+	serFT.write(b'c,0,1,1,0')
+	serFT.write(b'R')
 
 # Terminate FT sensor ROS node =====================================================================================
 def endFT():	
-	event_shutdown_FT.set()
-	time.sleep(8)
-	print("Shut down FT launch node!!!")
-	p_FT.terminate()
-	p_launch.terminate()
+	serFT.write(b'C')
+	serFT.write(b'c,0,1,0,4')
+	serFT.write(b'R')
 	
 # Read Bota FT sensor and translate into N	
 def readFT():
 	try:
-		ser2.reset_input_buffer()
-		ser_bytes2 = ser2.readline()
-		
+		serFT.flushInput()
+		remove_trash = serFT.read_until(b'\n1\t')
+		ser_bytes2 = serFT.read_until(b'\n1\t')
+
 		try:
-			meas = float(ser_bytes2[0:len(ser_bytes2)-2].decode("utf-8"))*9.81*.001
-		except:
+			meas = ser_bytes2[0:len(ser_bytes2)].decode("utf-8")
+			meas=meas.strip('\n1\t')
+			meas=meas.replace('\x00','')
+			meas=meas.strip('')
+			print(meas)
+			FT=[float(x) for x in meas.split('\t')]
+			print(FT)
+		except Exception as e:
+			print(meas)
 			print('Read Error from FT sensor message')
+			print(e)
 	except:
 		print('Connection Error to FT sensor')
+	
 		
 # Read 4 tab delimited values from the STM	
 def readSTM():
@@ -68,18 +81,27 @@ def writeSTM(d_Current,d_Position):
 	except :
 		print('Write Failed')	
 	
-	
+def handler(signum,frame):
+	endFT()	
+	exit(1)
+
+signal.signal(signal.SIGINT, handler)
+
 if __name__ == '__main__':
+	startFT()
 	while True:
-		try:
-			Curr,Pos,Stif,Etc=readSTM()
-		except:
-			continue
-		print(Curr,Pos,Stif,Etc)
-		dc=1
-		dp=2
-		writeSTM(dc,dp)
-		time.sleep(.01)
+		readFT()
+		time.sleep(1)
+					# STM READ/WRITE
+		# try:
+		# 	Curr,Pos,Stif,Etc=readSTM()
+		# except:
+		# 	continue
+		# print(Curr,Pos,Stif,Etc)
+		# dc=1
+		# dp=2
+		# writeSTM(dc,dp)
+		# time.sleep(.01)
 			
 	
 	
