@@ -1,6 +1,7 @@
 import serial
 import signal
 import time
+import csv
 #import FT_sensor.FT_ros_interface as ros_interface
 #import FT_sensor.launch_FT_sensor as launch_ft_sensor
 #from FT_sensor.events import event_shutdown_FT
@@ -19,7 +20,7 @@ try:
 	serFT.flushInput()
 except:
 	print('No FT Connected')
-
+CalVal=0
 
 
 # Start FT sensor ROS node =====================================================================================
@@ -38,7 +39,7 @@ def endFT():
 # Read Bota FT sensor and translate into N	
 def readFT():
 	try:
-		serFT.flushInput()
+		#serFT.flushInput()
 		remove_trash = serFT.read_until(b'\n1\t')
 		ser_bytes2 = serFT.read_until(b'\n1\t')
 
@@ -47,17 +48,31 @@ def readFT():
 			meas=meas.strip('\n1\t')
 			meas=meas.replace('\x00','')
 			meas=meas.strip('')
-			print(meas)
 			FT=[float(x) for x in meas.split('\t')]
-			print(FT)
+			#print(FT)
 		except Exception as e:
 			print(meas)
 			print('Read Error from FT sensor message')
 			print(e)
 	except:
 		print('Connection Error to FT sensor')
-	
-		
+	return FT
+
+def Calibrate():
+	Cal=0
+	for i in range(0,99):
+		F=readFT()
+		Fz=F[2]
+		Cal=Cal+Fz
+	Cal=Cal/100
+	return Cal
+
+def readFTCal(CalibrationVal):
+	F=readFT()
+	Fz=F[2]-CalibrationVal
+	print(Fz)
+	return Fz
+
 # Read 4 tab delimited values from the STM	
 def readSTM():
 	Curr=0
@@ -70,6 +85,12 @@ def readSTM():
 
 
 	return Curr,Pos,Stif,Etc
+
+def safe2csv():
+	with open("cal_data_"+moment+".csv","a") as f:
+	writer = csv.writer(f,delimiter=",")
+	writer.writerow([sv1,cv])
+
 	
 # Write desired current and position to STM	
 def writeSTM(d_Current,d_Position):
@@ -89,9 +110,10 @@ signal.signal(signal.SIGINT, handler)
 
 if __name__ == '__main__':
 	startFT()
+	CalVal=Calibrate()
 	while True:
-		readFT()
-		time.sleep(1)
+		readFTCal(CalVal)
+		#time.sleep(1)
 					# STM READ/WRITE
 		# try:
 		# 	Curr,Pos,Stif,Etc=readSTM()
