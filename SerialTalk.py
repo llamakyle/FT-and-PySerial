@@ -2,9 +2,7 @@ import serial
 import signal
 import time
 import csv
-#import FT_sensor.FT_ros_interface as ros_interface
-#import FT_sensor.launch_FT_sensor as launch_ft_sensor
-#from FT_sensor.events import event_shutdown_FT
+
 try:
 	ser = serial.Serial('/dev/ttyACM0')	#This will change depending on the port the stm is connected to
 	ser.flushInput()
@@ -61,15 +59,24 @@ def readFT():
 def Calibrate():
 	Cal=0
 	for i in range(0,99):
-		F=readFT()
-		Fz=F[2]
-		Cal=Cal+Fz
-	Cal=Cal/100
+		try:
+			F=readFT()
+			Fz=F[2]
+			Cal=Cal+Fz
+			c=c+1
+		except Exception as e:
+			print('Read Error from FT sensor message')
+			print(e)
+	Cal=Cal/c
 	return Cal
 
 def readFTCal(CalibrationVal):
-	F=readFT()
-	Fz=F[2]-CalibrationVal
+	try:
+		F=readFT()
+		Fz=F[2]-CalibrationVal
+	except Exception as e:
+			print('Read Error from FT sensor message')
+			print(e)
 	print(Fz)
 	return Fz
 
@@ -86,7 +93,7 @@ def readSTM():
 
 	return Curr,Pos,Stif,Etc
 
-def safe2csv(filename,data2save):
+def save2csv(filename,data2save):
 	with open(filename,"a") as f:
 		writer = csv.writer(f,delimiter=",")
 		writer.writerow(data2save)
