@@ -86,12 +86,12 @@ def readSTM():
 
 	return Curr,Pos,Stif,Etc
 
-def safe2csv():
-	with open("cal_data_"+moment+".csv","a") as f:
-	writer = csv.writer(f,delimiter=",")
-	writer.writerow([sv1,cv])
+def safe2csv(filename,data2save):
+	with open(filename,"a") as f:
+		writer = csv.writer(f,delimiter=",")
+		writer.writerow(data2save)
 
-	
+
 # Write desired current and position to STM	
 def writeSTM(d_Current,d_Position):
 	try:
