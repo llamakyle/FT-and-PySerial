@@ -21,20 +21,20 @@ except:
 CalVal=0
 
 
-# Start FT sensor ROS node =====================================================================================
+# Change FT Sensor Data Sending Mode =====================================================================================
 def startFT():
 	time.sleep(2)
 	serFT.write(b'C')
 	serFT.write(b'c,0,1,1,0')
 	serFT.write(b'R')
 
-# Terminate FT sensor ROS node =====================================================================================
+# Change FT Sensor Data Sending Mode Back to Original Settings =====================================================================================
 def endFT():	
 	serFT.write(b'C')
 	serFT.write(b'c,0,1,0,4')
 	serFT.write(b'R')
 	
-# Read Bota FT sensor and translate into N	
+# Read Bota FT sensor	
 def readFT():
 	try:
 		#serFT.flushInput()
@@ -119,7 +119,10 @@ if __name__ == '__main__':
 	startFT()
 	CalVal=Calibrate()
 	while True:
-		readFTCal(CalVal)
+		try:
+			readFTCal(CalVal)
+		except:
+			continue
 		#time.sleep(1)
 					# STM READ/WRITE
 		# try:
